@@ -489,3 +489,239 @@ AND keyword_ IS NOT NULL -- 過濾沒有關鍵字的資料
 AND search_users > 5 * (DATE_DIFF(end_date, start_date, DAY) + 1)
 ORDER BY search_rank ASC;
 
+############### R
+---
+title: "Untitled"
+output: html_document
+date: "2025-07-15"
+---
+```{r}
+library(dplyr)
+library(readxl)
+library(openxlsx)
+library(readr)
+library(reactable)
+library(htmlwidgets)
+library(scales)
+library(tidyr)
+library(stringr)
+
+kw <- read_csv("C:/Users/Lily Peng/Downloads/0820-0821_kw.csv")
+colnames(kw)
+
+# 若 department 欄位存在 NA，則顯示警告並停止執行
+if (any(is.na(kw$department))) {
+  warning("欄位 department 存在 NA 值，請先檢查資料")
+  kw_na <- kw %>% filter(is.na(department))
+  print(kw_na)
+  stop("程式已終止")
+}
+
+
+# kw_na_1 = kw_na %>% select(layer1,layer2,department) %>% distinct 
+# 
+# write.xlsx(kw_na_1, "test.xlsx", overwrite = TRUE)
+```
+
+```{r}
+df_kw <- data.frame(kw) 
+
+df_kw <- df_kw %>%
+  mutate(across(
+    .cols = c(
+      rank = search_rank,                              
+      search_count, 
+      search_users, 
+      product_total,
+      product_1P,
+      product_3P,
+      avg_position,
+      avg_position_1P,
+      avg_position_3P,
+      impression_1P,
+      impression_3P,
+      impression_total,
+      click_1P,
+      click_3P,
+      click_total,
+      sold_goods_1P,
+      sold_goods_3P,
+      sold_goods_total,
+      order_amt_1P,
+      order_amt_3P,
+      order_amt_total,
+      order_qty_1P,
+      order_qty_3P,
+      order_qty_total,
+      order_cnt_1P,
+      order_cnt_3P,
+      order_cnt_total,
+      entp_cnt_1P,
+      entp_cnt_3P,
+      total_entp_cnt
+    ),
+    .fns = ~ as.numeric(.)
+  )) %>%
+  mutate(
+    # CTR: click / impression
+    CTR_1P = ifelse(impression_1P > 0, click_1P / impression_1P, NA_real_),
+    CTR_3P = ifelse(impression_3P > 0, click_3P / impression_3P, NA_real_),
+    CTR_total = ifelse(impression_total > 0, click_total / impression_total, NA_real_),
+
+    # CVR: order_cnt / click
+    轉單率_1P = ifelse(click_1P > 0, order_cnt_1P / click_1P, NA_real_),
+    轉單率_3P = ifelse(click_3P > 0, order_cnt_3P / click_3P, NA_real_),
+    轉單率_total = ifelse(click_total > 0, order_cnt_total / click_total, NA_real_),
+    
+    layer1.2 = paste0(layer1, ">", layer2)
+  )
+```
+
+
+
+
+```{r}
+df_kw <- df_kw %>%
+  group_by(keyword) %>%
+  mutate(
+    n_layer = n_distinct(layer1.2),
+    keyword_product_total = sum(product_total, na.rm = TRUE),
+    keyword_impression_total = sum(impression_total, na.rm = TRUE),
+    goods_ratio_in_keyword = ifelse(keyword_product_total == 0, 0, product_total / keyword_product_total),
+    impression_ratio_in_keyword = ifelse(keyword_impression_total == 0, 0, impression_total / keyword_impression_total),
+    max_goods_ratio = max(goods_ratio_in_keyword, na.rm = TRUE)  # 加這行：抓該 keyword 最大佔比
+  ) %>%
+  filter(n_layer == 1 | goods_ratio_in_keyword >= 0.1 | goods_ratio_in_keyword == max_goods_ratio) %>%
+  ungroup()
+```
+
+
+```{r}
+kw_avg_summary <- df_kw %>%
+  group_by(layer1.2) %>%
+  summarise(
+    avg_轉單率_layer = sum(order_cnt_total, na.rm = TRUE) / sum(click_total, na.rm = TRUE),
+    avg_product_total = mean(product_total, na.rm = TRUE),
+    avg_entp_total = mean(total_entp_cnt, na.rm = TRUE),
+    avg_CTR_total = sum(click_total, na.rm = TRUE) / sum(impression_total, na.rm = TRUE),
+    
+    median_轉單率_layer = median(order_cnt_total/click_total, na.rm = TRUE),
+    median_product_total = median(product_total, na.rm = TRUE),
+    median_entp_total = median(total_entp_cnt, na.rm = TRUE),
+    median_CTR_total = median(click_total / impression_total, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+print(kw_avg_summary)
+# write.xlsx(kw_avg_summary, file = "kw_avg_summary.xlsx", overwrite = TRUE)
+summary(kw_avg_summary)
+
+```
+
+
+```{r}
+output_list <- list()
+all_departments <- unique(df_kw$department)
+wb <- createWorkbook() 
+
+for (dept in all_departments) {
+  if (is.na(dept)) next  # ⛔ 避免 NA 值造成錯誤
+
+  # 建立安全的工作表名稱（避免特殊符號、超過31字、NA）
+  safe_dept <- gsub("[:\\\\/?*\\[\\]]", "_", dept)  # 取代非法字元
+  safe_dept <- substr(safe_dept, 1, 31)             # 限制長度
+  safe_dept <- ifelse(is.na(safe_dept), "未分類", safe_dept)  # 替代 NA
+
+  df_dept <- df_kw %>% filter(department == dept)
+
+  df_result <- df_dept %>%
+    group_by(layer1.2) %>%
+    mutate(
+      avg_轉單率_layer = sum(order_cnt_total / click_total, na.rm = TRUE),
+      avg_product_total = mean(product_total, na.rm = TRUE),
+      avg_entp_total = mean(total_entp_cnt, na.rm = TRUE),
+      avg_CTR_total = sum(click_total / impression_total, na.rm = TRUE)
+    ) %>%
+    ungroup() %>%
+    mutate(
+      建議 = case_when(
+        is.na(轉單率_total) ~ NA_character_,
+        轉單率_total < avg_轉單率_layer & product_total < avg_product_total ~ "增加商品數",
+        轉單率_total < avg_轉單率_layer & total_entp_cnt < avg_entp_total ~ "加速招商",
+        轉單率_total < avg_轉單率_layer & CTR_total < avg_CTR_total ~ "優化商品運營",
+        轉單率_total >= avg_轉單率_layer ~ "繼續保持現有優勢",
+        TRUE ~ NA_character_
+      ),
+      key = paste0(search_rank, keyword, layer1.2),
+      品類搜尋次數 = search_count * impression_ratio_in_keyword,
+      品類搜尋人數 = search_users * impression_ratio_in_keyword
+    ) %>%
+    select(
+      資料時間 = date_range,
+      搜索排名 = search_rank,
+      關鍵字 = keyword,
+      關鍵字類型 = keyword_category,
+      搜索次數 = search_count,
+      搜索人數 = search_users,
+      部門 = department,
+      第一層 = layer1,
+      第二層 = layer2,
+      二級品類 = layer1.2,
+      key,
+      總曝光商品數 = product_total,
+      關鍵字曝光商品佔比 = goods_ratio_in_keyword,
+      關鍵字曝光次數佔比 = impression_ratio_in_keyword,
+      品類搜尋次數,
+      品類搜尋人數,
+      曝光商品數_1P = product_1P,
+      曝光商品數_3P = product_3P,
+      # 商品平均曝光位置 = avg_position,
+      # 商品平均曝光位置_1P = avg_position_1P,
+      # 商品平均曝光位置_3P = avg_position_3P,
+      總曝光廠商數 = total_entp_cnt,
+      曝光廠商數_1P = entp_cnt_1P,
+      曝光廠商數_3P = entp_cnt_3P,
+      總曝光次數 = impression_total,
+      曝光次數_1P = impression_1P,
+      曝光次數_3P = impression_3P,
+      總點擊次數 = click_total,
+      點擊次數_1P = click_1P,
+      點擊次數_3P = click_3P,
+      有售商品總數 = sold_goods_total,
+      有售商品數_1P = sold_goods_1P,
+      有售商品數_3P = sold_goods_3P,
+      總預約金額 = order_amt_total,
+      預約金額_1P = order_amt_1P,
+      預約金額_3P = order_amt_3P,
+      總預約數量 = order_qty_total,
+      預約數量_1P = order_qty_1P,
+      預約數量_3P = order_qty_3P,
+      總訂單數 = order_cnt_total,
+      訂單數_1P = order_cnt_1P,
+      訂單數_3P = order_cnt_3P,
+      建議
+    )
+
+  output_list[[dept]] <- df_result
+
+  if (!(safe_dept %in% names(wb))) {
+    addWorksheet(wb, sheetName = safe_dept)
+  }
+  writeData(wb, sheet = safe_dept, df_result)
+}
+
+# 合併 + 排序
+df_output <- bind_rows(output_list) %>%
+  arrange(搜索排名)
+
+# 寫入總表
+addWorksheet(wb, "總表")
+writeData(wb, sheet = "總表", df_output)
+```
+
+
+```{r}
+# 儲存 Excel
+saveWorkbook(wb, "0817-0823_kw dashboard.xlsx", overwrite = TRUE)
+```
+
