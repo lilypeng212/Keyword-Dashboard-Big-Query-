@@ -1,4 +1,65 @@
-# Keyword-Dashboard-Big-Query-
+# Keyword Dashboard with BigQuery
+
+## 📌 Problem
+Keyword-level performance data lacked a unified analytical framework, making it difficult to connect search demand, product exposure, and downstream conversion outcomes (clicks, orders). As a result, teams were unable to effectively identify high-impact opportunities across categories and prioritize growth actions.
+
+---
+
+## 💡 Solution
+Built an end-to-end keyword analytics pipeline integrating BigQuery (data processing) and R (analysis & decision logic) to transform raw search logs into actionable business insights.
+
+### BigQuery (Data Pipeline & Attribution Logic)
+- Parsed raw search event logs (JSON) to extract keyword, product, impression, and click-level data  
+- Constructed keyword × product × category datasets with 1P / 3P segmentation  
+- Implemented visibility filtering (visibilityRate ≥ 80) for high-quality exposure signals  
+- Designed 24-hour attribution model linking search clicks to orders  
+- Applied last-click logic and deduplicated conversion mapping  
+- Aggregated metrics across keyword, category (L1/L2), and supplier levels  
+
+### R (Analytics & Decision Framework)
+- Calculated key metrics including CTR, CVR, product coverage, and supplier distribution  
+- Built keyword-category filtering logic based on:
+  - product share within keyword  
+  - impression share within keyword  
+  - dominant category identification  
+- Computed benchmark metrics (avg / median CTR & CVR) at category level  
+- Developed rule-based recommendation engine:
+  - Increase assortment  
+  - Expand supplier base  
+  - Optimize product operations  
+- Generated structured outputs by department and exported multi-sheet dashboards  
+
+---
+
+## 🔍 Highlights
+- Developed full funnel visibility from **search → exposure → click → conversion**  
+- Integrated behavioral data with transaction data through attribution modeling  
+- Built keyword-category prioritization logic based on supply-demand mismatch  
+- Translated complex data into actionable, department-level recommendations  
+
+---
+
+## 📈 Impact
+- Enabled end-to-end visibility across keyword performance and conversion funnel  
+- Reduced manual data processing through automated SQL + R pipeline  
+- Supported data-driven prioritization of product assortment and supplier strategy  
+- Provided scalable framework for recurring keyword performance monitoring  
+
+---
+
+## 🛠 Tools
+- BigQuery SQL (data extraction, transformation, attribution modeling)  
+- R (dplyr, data processing, metric computation, decision rules)  
+- Excel / Dashboard output  
+- Data Cleaning & Feature Engineering  
+
+---
+
+## ⚠️ Disclaimer
+This repository uses sanitized descriptions and synthetic examples only.  
+No proprietary data, client information, internal IDs, or confidential business logic are included.
+
+
 
 WITH search_combine AS (
     SELECT *
