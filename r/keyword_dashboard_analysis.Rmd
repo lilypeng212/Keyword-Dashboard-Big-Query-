@@ -1,3 +1,90 @@
+---
+title: "Untitled"
+output: html_document
+date: "2025-07-15"
+---
+```{r}
+library(dplyr)
+library(readxl)
+library(openxlsx)
+library(readr)
+library(reactable)
+library(htmlwidgets)
+library(scales)
+library(tidyr)
+library(stringr)
+
+kw <- read_csv("C:/Users/Lily Peng/Downloads/keyword.csv")
+colnames(kw)
+
+# 若 department 欄位存在 NA，則顯示警告並停止執行
+if (any(is.na(kw$department))) {
+  warning("欄位 department 存在 NA 值，請先檢查資料")
+  kw_na <- kw %>% filter(is.na(department))
+  print(kw_na)
+  stop("程式已終止")
+}
+
+
+# kw_na_1 = kw_na %>% select(layer1,layer2,department) %>% distinct 
+# 
+# write.xlsx(kw_na_1, "test.xlsx", overwrite = TRUE)
+```
+
+```{r}
+df_kw <- data.frame(kw) 
+
+df_kw <- df_kw %>%
+  mutate(across(
+    .cols = c(
+      rank = search_rank,                              
+      search_count, 
+      search_users, 
+      product_total,
+      product_1P,
+      product_3P,
+      avg_position,
+      avg_position_1P,
+      avg_position_3P,
+      impression_1P,
+      impression_3P,
+      impression_total,
+      click_1P,
+      click_3P,
+      click_total,
+      sold_goods_1P,
+      sold_goods_3P,
+      sold_goods_total,
+      order_amt_1P,
+      order_amt_3P,
+      order_amt_total,
+      order_qty_1P,
+      order_qty_3P,
+      order_qty_total,
+      order_cnt_1P,
+      order_cnt_3P,
+      order_cnt_total,
+      entp_cnt_1P,
+      entp_cnt_3P,
+      total_entp_cnt
+    ),
+    .fns = ~ as.numeric(.)
+  )) %>%
+  mutate(
+    # CTR: click / impression
+    CTR_1P = ifelse(impression_1P > 0, click_1P / impression_1P, NA_real_),
+    CTR_3P = ifelse(impression_3P > 0, click_3P / impression_3P, NA_real_),
+    CTR_total = ifelse(impression_total > 0, click_total / impression_total, NA_real_),
+
+    # CVR: order_cnt / click
+    轉單率_1P = ifelse(click_1P > 0, order_cnt_1P / click_1P, NA_real_),
+    轉單率_3P = ifelse(click_3P > 0, order_cnt_3P / click_3P, NA_real_),
+    轉單率_total = ifelse(click_total > 0, order_cnt_total / click_total, NA_real_),
+    
+    layer1.2 = paste0(layer1, ">", layer2)
+  )
+```
+
 ```{r}
 df_kw <- df_kw %>%
   group_by(keyword) %>%
