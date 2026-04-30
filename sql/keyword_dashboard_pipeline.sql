@@ -1,6 +1,6 @@
 WITH search_combine AS (
     SELECT *
-    FROM `momo-ads-data.momowa.ecapp_search_v2`
+    FROM `project.ecapp_search_v2`
 ),
 -- 搜索資料中的商品資料，取得關鍵字、商品編號、頁數、member_id、點擊與曝光等資訊
 search_date_search_cnt AS (
@@ -87,7 +87,7 @@ goods_layer_g AS (
         gd.L2_CAT_NAME AS layer2,
         kg.party
     FROM keyword_goods kg
-    LEFT JOIN `momo-ads-data.shared_data.ALL_GOODS_INFO_DAILY_1P3P` gd
+    LEFT JOIN `project.shared_data.ALL_GOODS_INFO_DAILY_1P3P` gd
     ON kg.goodsCode = gd.GOODS_CODE
 ),
 -- 每個關鍵字品類下曝光商品總數
@@ -122,7 +122,7 @@ goods_layer AS (
         CASE WHEN party = '1P' THEN COALESCE(position, 0) ELSE 0 END AS position_1P,
         CASE WHEN party = '3P' THEN COALESCE(position, 0) ELSE 0 END AS position_3P        
     FROM keyword_goods kg
-    LEFT JOIN `momo-ads-data.shared_data.ALL_GOODS_INFO_DAILY_1P3P` gd
+    LEFT JOIN `project.shared_data.ALL_GOODS_INFO_DAILY_1P3P` gd
     ON kg.goodsCode = gd.GOODS_CODE
 ),
 -- 彙總可視率 >= 80 的商品曝光與點擊數
@@ -210,7 +210,7 @@ sdc_party AS (
             ELSE '1P'
         END AS party
     FROM search_date_search_cnt sdc
-    LEFT JOIN `momo-ads-data.shared_data.ALL_GOODS_INFO_DAILY_1P3P` gd
+    LEFT JOIN `project.shared_data.ALL_GOODS_INFO_DAILY_1P3P` gd
     ON sdc.goodsCode = gd.GOODS_CODE
 ),
 -- 訂單資料，並標註每筆訂單是 1P 或 3P
@@ -221,7 +221,7 @@ ord AS (
             WHEN LEFT(GOODS_CODE,2) = 'TP' THEN '3P'
             ELSE '1P'
         END AS party
-    FROM `momo-ads-data.shared_data.ORDERDAIL_1P3P`
+    FROM `project.shared_data.ORDERDAIL_1P3P`
 ),
 -- 搜索資料與訂單資料做 Join，設定 24 小時內轉換歸因機制
 wa_ord AS (
@@ -277,7 +277,7 @@ org_conversion as (
     click_rank_desc,
     order_rank_asc
    FROM wa_ord
-  LEFT JOIN `momo-ads-data.shared_data.ALL_GOODS_INFO_DAILY_1P3P` AS gd
+  LEFT JOIN `project.shared_data.ALL_GOODS_INFO_DAILY_1P3P` AS gd
   ON wa_ord.goodsCode =  gd.GOODS_CODE
   WHERE order_rank_asc = 1 # 有造成轉換的click只抓最早的訂單 # 或是沒有轉換的click
 ),
@@ -312,7 +312,7 @@ org_conversion_g AS (
         click_rank_desc,
         order_rank_asc
     FROM wa_ord
-    LEFT JOIN `momo-ads-data.shared_data.ALL_GOODS_INFO_DAILY_1P3P` gd
+    LEFT JOIN `project.shared_data.ALL_GOODS_INFO_DAILY_1P3P` gd
     ON wa_ord.goodsCode = gd.GOODS_CODE
     WHERE order_rank_asc = 1
 ),
@@ -390,7 +390,7 @@ final_result AS (
     LEFT JOIN keyword_final kf
         ON gn.searchKeyword = kf.searchKeyword
         -- AND gn.create_date = kf.create_date
-    LEFT JOIN `momo-ads-data.daniel_test.二級品類_1P3P部門對照` c --將品類的1P.3P部門歸在一起
+    LEFT JOIN `project.daniel_test.二級品類_1P3P部門對照` c --將品類的1P.3P部門歸在一起
         ON gn.layer1 = c.layer1
         AND gn.layer2 = c.layer2
     GROUP BY 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28
@@ -424,7 +424,7 @@ keyword_type AS (
     FROM final_result f
     LEFT JOIN (
         SELECT DISTINCT LOWER(TRIM(searchkeyword)) AS keyword
-        FROM `momo-ads-data.Paul_dataset.top_brand_extension_with_brand_no_v2` --此資料為廣告組人工維護，並非收錄所有品牌字
+        FROM `project.Paul_dataset.top_brand_extension_with_brand_no_v2` --此資料為廣告組人工維護，並非收錄所有品牌字
     ) bd_kw
     ON LOWER(TRIM(f.searchKeyword)) = bd_kw.keyword
 )
@@ -486,90 +486,3 @@ AND layer2 IS NOT NULL  -- 過濾沒有品類對應的資料
 AND keyword_ IS NOT NULL -- 過濾沒有關鍵字的資料
 AND search_users > 5 * (DATE_DIFF(end_date, start_date, DAY) + 1)
 ORDER BY search_rank ASC;
-
-############### R
----
-title: "Untitled"
-output: html_document
-date: "2025-07-15"
----
-```{r}
-library(dplyr)
-library(readxl)
-library(openxlsx)
-library(readr)
-library(reactable)
-library(htmlwidgets)
-library(scales)
-library(tidyr)
-library(stringr)
-
-kw <- read_csv("C:/Users/Lily Peng/Downloads/0820-0821_kw.csv")
-colnames(kw)
-
-# 若 department 欄位存在 NA，則顯示警告並停止執行
-if (any(is.na(kw$department))) {
-  warning("欄位 department 存在 NA 值，請先檢查資料")
-  kw_na <- kw %>% filter(is.na(department))
-  print(kw_na)
-  stop("程式已終止")
-}
-
-
-# kw_na_1 = kw_na %>% select(layer1,layer2,department) %>% distinct 
-# 
-# write.xlsx(kw_na_1, "test.xlsx", overwrite = TRUE)
-```
-
-```{r}
-df_kw <- data.frame(kw) 
-
-df_kw <- df_kw %>%
-  mutate(across(
-    .cols = c(
-      rank = search_rank,                              
-      search_count, 
-      search_users, 
-      product_total,
-      product_1P,
-      product_3P,
-      avg_position,
-      avg_position_1P,
-      avg_position_3P,
-      impression_1P,
-      impression_3P,
-      impression_total,
-      click_1P,
-      click_3P,
-      click_total,
-      sold_goods_1P,
-      sold_goods_3P,
-      sold_goods_total,
-      order_amt_1P,
-      order_amt_3P,
-      order_amt_total,
-      order_qty_1P,
-      order_qty_3P,
-      order_qty_total,
-      order_cnt_1P,
-      order_cnt_3P,
-      order_cnt_total,
-      entp_cnt_1P,
-      entp_cnt_3P,
-      total_entp_cnt
-    ),
-    .fns = ~ as.numeric(.)
-  )) %>%
-  mutate(
-    # CTR: click / impression
-    CTR_1P = ifelse(impression_1P > 0, click_1P / impression_1P, NA_real_),
-    CTR_3P = ifelse(impression_3P > 0, click_3P / impression_3P, NA_real_),
-    CTR_total = ifelse(impression_total > 0, click_total / impression_total, NA_real_),
-
-    # CVR: order_cnt / click
-    轉單率_1P = ifelse(click_1P > 0, order_cnt_1P / click_1P, NA_real_),
-    轉單率_3P = ifelse(click_3P > 0, order_cnt_3P / click_3P, NA_real_),
-    轉單率_total = ifelse(click_total > 0, order_cnt_total / click_total, NA_real_),
-    
-    layer1.2 = paste0(layer1, ">", layer2)
-  )
