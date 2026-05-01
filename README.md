@@ -26,7 +26,7 @@ Additional R scripts were used for offline validation, metric checking, and rule
 - Used after the SQL pipeline for offline validation and metric checking  
 - Tested CTR, CVR, product coverage, and supplier distribution calculations  
 - Developed rule-based recommendation logic before dashboard implementation  
-- Exported department-level Excel outputs for review and discussion  
+- Exported department-level Excel outputs for review  
 
 ---
 
