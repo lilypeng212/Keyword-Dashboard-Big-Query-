@@ -11,22 +11,22 @@ Built a keyword analytics workflow where BigQuery served as the main data proces
 Additional R scripts were used for offline validation, metric checking, and rule-based recommendation testing.
 
 ### BigQuery SQL — Main Dashboard Data Pipeline
-- Parsed raw search event logs to extract keyword, product, impression, and click-level data
-- Constructed keyword × product × category datasets with 1P / 3P segmentation
-- Designed 24-hour last-click attribution logic linking search clicks to orders
-- Aggregated dashboard-ready metrics across keyword, category, supplier, and transaction dimensions
-- Produced the final BigQuery output table directly connected to Looker Studio
+- Parsed raw search event logs to extract keyword, product, impression, and click-level data  
+- Constructed keyword × product × category datasets with 1P / 3P segmentation  
+- Designed 24-hour last-click attribution logic linking search clicks to orders  
+- Aggregated dashboard-ready metrics across keyword, category, supplier, and transaction dimensions  
+- Produced the final BigQuery output table directly connected to Looker Studio  
 
 ### Looker Studio — Dashboard Visualization
-- Connected directly to the final BigQuery output table
-- Visualized keyword search demand, product exposure, clicks, orders, and category-level opportunities
-- Supported recurring monitoring for internal and client-facing business discussions
+- Connected directly to the final BigQuery output table  
+- Visualized keyword search demand, product exposure, clicks, orders, and category-level opportunities  
+- Supported recurring monitoring for internal and client-facing business discussions  
 
 ### R — Supplementary Analysis
-- Used after the SQL pipeline for offline validation and metric checking
-- Tested CTR, CVR, product coverage, and supplier distribution calculations
-- Developed rule-based recommendation logic before dashboard implementation
-- Exported department-level Excel outputs for review and discussion
+- Used after the SQL pipeline for offline validation and metric checking  
+- Tested CTR, CVR, product coverage, and supplier distribution calculations  
+- Developed rule-based recommendation logic before dashboard implementation  
+- Exported department-level Excel outputs for review and discussion  
 
 ---
 
@@ -40,16 +40,17 @@ Additional R scripts were used for offline validation, metric checking, and rule
 
 ## 📈 Impact
 - Enabled end-to-end visibility across keyword performance and conversion funnel  
-- Reduced manual data processing through automated SQL + R pipeline  
+- Established a scalable BigQuery → Looker Studio pipeline for recurring dashboard monitoring  
+- Reduced manual data processing by automating data transformation and validation workflows  
 - Supported data-driven prioritization of product assortment and supplier strategy  
-- Provided scalable framework for recurring keyword performance monitoring  
 
 ---
 
 ## 🛠 Tools
 - BigQuery SQL (data extraction, transformation, attribution modeling)  
-- R (dplyr, data processing, metric computation, decision rules)  
-- Excel / Dashboard output  
+- Looker Studio (dashboard visualization)  
+- R (supplementary analysis, validation, recommendation logic)  
+- Excel (output & review)  
 - Data Cleaning & Feature Engineering  
 
 ---
